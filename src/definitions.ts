@@ -20,6 +20,7 @@ export interface EmailAddress {
 export interface Contact {
   contactId: string;
   displayName?: string;
+  photoThumbnail?: string;
   phoneNumbers: PhoneNumber[];
   emails: EmailAddress[];
   organizationName?: string;
