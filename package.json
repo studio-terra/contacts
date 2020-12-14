@@ -8,8 +8,7 @@
     "build": "npm run clean && tsc",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
-    "prepublishOnly": "npm run build",
-    "postinstall": "tsc"
+    "prepublishOnly": "npm run build"
   },
   "author": "Jonathan Gerber",
   "license": "MIT",
