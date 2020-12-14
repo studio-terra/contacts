@@ -7,24 +7,45 @@
 //
 
 import Foundation
+import Capacitor
 import Contacts
 
 class Contacts {
-    class func getContactFromCNContact() throws -> [CNContact] {
+    class func getContactFromCNContact(_ call: CAPPluginCall) throws -> [CNContact] {
 
         let contactStore = CNContactStore()
-        let keysToFetch = [
+        var keysToFetch = [
             CNContactFormatter.descriptorForRequiredKeys(for: .fullName),
-            CNContactPhoneNumbersKey,
             CNContactGivenNameKey,
             CNContactMiddleNameKey,
             CNContactFamilyNameKey,
-            CNContactEmailAddressesKey,
-            CNContactThumbnailImageDataKey,
-            CNContactBirthdayKey,
-            CNContactOrganizationNameKey,
-            CNContactJobTitleKey,
             ] as [Any]
+        let includeEmails = call.getBool("includeEmails")
+        let includePhones = call.getBool("includePhones")
+        let includeThumbnail = call.getBool("includeThumbnail")
+        let includeBirthday = call.getBool("includeBirthday")
+        let includeOrganization = call.getBool("includeOrganization")
+        
+        if includeEmails ?? true {
+            keysToFetch.append(CNContactEmailAddressesKey)
+        }
+
+        if includePhones ?? true {
+            keysToFetch.append(CNContactPhoneNumbersKey)
+        }
+        
+        if includeThumbnail ?? true {
+            keysToFetch.append(CNContactThumbnailImageDataKey)
+        }
+        
+        if includeBirthday ?? true {
+            keysToFetch.append(CNContactBirthdayKey)
+        }
+
+        if includeOrganization ?? true {
+            keysToFetch.append(CNContactOrganizationNameKey)
+            keysToFetch.append(CNContactJobTitleKey)
+        }
 
         //Get all the containers
         var allContainers: [CNContainer] = []
@@ -39,6 +60,7 @@ class Contacts {
             let fetchPredicate = CNContact.predicateForContactsInContainer(withIdentifier: container.identifier)
 
             let containerResults = try contactStore.unifiedContacts(matching: fetchPredicate, keysToFetch: keysToFetch as! [CNKeyDescriptor])
+            
             results.append(contentsOf: containerResults)
         }
 

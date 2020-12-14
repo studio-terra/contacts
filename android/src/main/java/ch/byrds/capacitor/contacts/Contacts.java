@@ -11,14 +11,17 @@ import android.provider.ContactsContract.CommonDataKinds.Organization;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.CommonDataKinds.Photo;
 import android.util.Base64;
+import android.util.Log;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.NativePlugin;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.json.JSONException;
@@ -43,6 +46,16 @@ public class Contacts extends Plugin {
   private static final String ORGANIZATION_NAME = "organizationName";
   private static final String ORGANIZATION_ROLE = "organizationRole";
   private static final String BIRTHDAY = "birthday";
+
+  private boolean includeEmails = true;
+  private boolean includePhones = true;
+  private boolean includeThumbnail = true;
+  private boolean includeOrganization = true;
+  private boolean includeBirthday = true;
+  private boolean shouldCheckHasPhone = false;
+  private boolean hasPhone = true;
+  private boolean shouldCheckIsInVisibleGroup = true;
+  private boolean isInVisibleGroup = true;
 
   @PluginMethod
   public void getPermissions(PluginCall call) {
@@ -81,36 +94,103 @@ public class Contacts extends Plugin {
 
   @PluginMethod
   public void getContacts(PluginCall call) {
+    // get query options
+    if (call != null) {
+      includeEmails = call.getBoolean("includeEmails", includeEmails);
+      includePhones = call.getBoolean("includePhones", includePhones);
+      includeThumbnail = call.getBoolean("includeThumbnail", includeThumbnail);
+      includeOrganization =
+        call.getBoolean("includeOrganization", includeOrganization);
+      includeBirthday = call.getBoolean("includeBirthday", includeBirthday);
+      shouldCheckHasPhone = call.hasOption("hasPhone");
+      if (shouldCheckHasPhone) {
+        hasPhone = call.getBoolean("hasPhone");
+      }
+      shouldCheckIsInVisibleGroup = call.hasOption("isInVisibleGroup");
+      if (shouldCheckIsInVisibleGroup) {
+        isInVisibleGroup = call.getBoolean("isInVisibleGroup");
+      }
+    }
+
     // initialize array
     JSArray jsContacts = new JSArray();
 
     ContentResolver contentResolver = getContext().getContentResolver();
 
-    String[] projection = new String[] {
-      ContactsContract.Data.MIMETYPE,
-      Organization.TITLE,
-      ContactsContract.Contacts._ID,
-      ContactsContract.Data.CONTACT_ID,
-      ContactsContract.Contacts.DISPLAY_NAME,
-      ContactsContract.Contacts.Photo.PHOTO,
-      ContactsContract.CommonDataKinds.Contactables.DATA,
-      ContactsContract.CommonDataKinds.Contactables.TYPE,
-      ContactsContract.CommonDataKinds.Contactables.LABEL,
-    };
-    String selection = ContactsContract.Data.MIMETYPE + " in (?, ?, ?, ?, ?)";
-    String[] selectionArgs = new String[] {
-      Email.CONTENT_ITEM_TYPE,
-      Phone.CONTENT_ITEM_TYPE,
-      Event.CONTENT_ITEM_TYPE,
-      Organization.CONTENT_ITEM_TYPE,
-      Photo.CONTENT_ITEM_TYPE,
-    };
+    List<String> projection = new ArrayList<>();
+    projection.add(ContactsContract.Data.MIMETYPE);
+    projection.add(ContactsContract.Contacts._ID);
+    projection.add(ContactsContract.Data.CONTACT_ID);
+    projection.add(ContactsContract.Contacts.DISPLAY_NAME);
+    projection.add(ContactsContract.CommonDataKinds.Contactables.DATA);
+    projection.add(ContactsContract.CommonDataKinds.Contactables.TYPE);
+    projection.add(ContactsContract.CommonDataKinds.Contactables.LABEL);
+
+    String selection = "";
+    List<String> selectionArgs = new ArrayList<>();
+
+    final boolean shouldCheckMimeType =
+      includeEmails ||
+      includePhones ||
+      includeThumbnail ||
+      includeBirthday ||
+      includeOrganization;
+    if (shouldCheckMimeType) {
+      selection += ContactsContract.Data.MIMETYPE + " in (";
+
+      if (includeEmails) {
+        selection += "?,";
+        selectionArgs.add(Email.CONTENT_ITEM_TYPE);
+      }
+
+      if (includePhones) {
+        selection += "?,";
+        selectionArgs.add(Phone.CONTENT_ITEM_TYPE);
+        projection.add(ContactsContract.Contacts.Photo.PHOTO);
+      }
+
+      if (includeThumbnail) {
+        selection += "?,";
+        selectionArgs.add(Photo.CONTENT_ITEM_TYPE);
+      }
+
+      if (includeBirthday) {
+        selection += "?,";
+        selectionArgs.add(Event.CONTENT_ITEM_TYPE);
+      }
+
+      if (includeOrganization) {
+        selection += "?,";
+        selectionArgs.add(Organization.CONTENT_ITEM_TYPE);
+        projection.add(Organization.TITLE);
+      }
+
+      selection = selection.substring(0, selection.length() - 1);
+      selection += ")";
+    }
+    if (shouldCheckHasPhone) {
+      selection +=
+        " AND " +
+        ContactsContract.Data.HAS_PHONE_NUMBER +
+        " = '" +
+        (hasPhone ? 1 : 0) +
+        "'";
+    }
+
+    if (shouldCheckIsInVisibleGroup) {
+      selection +=
+        " AND " +
+        ContactsContract.Data.HAS_PHONE_NUMBER +
+        " = '" +
+        (hasPhone ? 1 : 0) +
+        "'";
+    }
 
     Cursor contactsCursor = contentResolver.query(
       ContactsContract.Data.CONTENT_URI,
-      projection,
+      projection.toArray(new String[0]),
       selection,
-      selectionArgs,
+      selectionArgs.toArray(new String[0]),
       null
     );
 
@@ -241,11 +321,12 @@ public class Contacts extends Plugin {
         }
       }
     }
+
     if (contactsCursor != null) {
       contactsCursor.close();
     }
-
     JSObject result = new JSObject();
+
     result.put("contacts", jsContacts);
     call.success(result);
   }

@@ -23,12 +23,22 @@ export interface Contact {
   photoThumbnail?: string;
   phoneNumbers: PhoneNumber[];
   emails: EmailAddress[];
+  birthday?: string;
   organizationName?: string;
   organizationRole?: string;
-  birthday?: string;
+}
+
+export interface QueryOptions {
+  includeEmails: boolean;
+  includePhones: boolean;
+  includeThumbnail: boolean;
+  includeBirthday: boolean;
+  includeOrganization: boolean;
+  hasPhone?: boolean;
+  isInVisibleGroup?: boolean;
 }
 
 export interface ContactsPlugin {
   getPermissions(): Promise<PermissionStatus>;
-  getContacts(): Promise<{ contacts: Contact[] }>;
+  getContacts(options?: QueryOptions): Promise<{ contacts: Contact[] }>;
 }

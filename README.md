@@ -151,21 +151,6 @@ In order to match them properly you need to format them before you can match or 
 ### Interfaces
 
 ```
-export interface PermissionStatus {
-  granted: boolean;
-}
-
-export interface Contact {
-  contactId: string;
-  displayName?: string;
-  photoThumbnail?: string;
-  phoneNumbers: PhoneNumber[];
-  emails: EmailAddress[];
-  organizationName?: string;
-  organizationRole?: string;
-  birthday?: string;
-}
-
 export interface PhoneNumber {
   label?: string;
   number?: string;
@@ -174,6 +159,27 @@ export interface PhoneNumber {
 export interface EmailAddress {
   label?: string;
   address?: string;
+}
+
+export interface Contact {
+  contactId: string;
+  displayName?: string;
+  photoThumbnail?: string;
+  phoneNumbers: PhoneNumber[];
+  emails: EmailAddress[];
+  birthday?: string;
+  organizationName?: string;
+  organizationRole?: string;
+}
+
+export interface QueryOptions {
+  includeEmails:  boolean,
+  includePhones: boolean,
+  includeThumbnail: boolean,
+  includeBirthday: boolean,
+  includeOrganization: boolean,
+  hasPhone?: boolean,
+  isInVisibleGroup?: boolean,
 }
 ```
 
